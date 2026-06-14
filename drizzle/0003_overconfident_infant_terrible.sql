@@ -1,0 +1,1 @@
+ALTER TABLE `business_lunch_items` ADD `is_available` boolean DEFAULT true NOT NULL;
