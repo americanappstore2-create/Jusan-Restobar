@@ -1,21 +1,14 @@
-// Storage helpers — uses AWS S3 (or Cloudflare R2 which is S3-compatible)
-// Configure via env vars: AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_REGION,
-// AWS_S3_BUCKET, and optionally AWS_ENDPOINT_URL for R2.
-
-import { S3Client, PutObjectCommand, GetObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
 
 function getS3Client() {
-  const region = process.env.AWS_REGION ?? "auto";
-  const endpoint = process.env.AWS_ENDPOINT_URL; // optional, for Cloudflare R2
-
   return new S3Client({
-    region,
-    ...(endpoint ? { endpoint, forcePathStyle: false } : {}),
+    region: "auto",
+    endpoint: process.env.AWS_ENDPOINT_URL,
     credentials: {
       accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? "",
       secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? "",
     },
+    forcePathStyle: false,
   });
 }
 
@@ -23,6 +16,15 @@ function getBucket() {
   const bucket = process.env.AWS_S3_BUCKET;
   if (!bucket) throw new Error("AWS_S3_BUCKET is not configured");
   return bucket;
+}
+
+function getPublicUrl(key: string): string {
+  const publicUrl = process.env.S3_PUBLIC_URL;
+  if (publicUrl) return `${publicUrl.replace(/\/$/, "")}/${key}`;
+  const endpoint = process.env.AWS_ENDPOINT_URL;
+  const bucket = getBucket();
+  if (endpoint) return `${endpoint.replace(/\/$/, "")}/${bucket}/${key}`;
+  return `https://${bucket}.s3.amazonaws.com/${key}`;
 }
 
 function appendHashSuffix(relKey: string): string {
@@ -44,7 +46,7 @@ export async function storagePut(
   const s3 = getS3Client();
   const bucket = getBucket();
   const key = appendHashSuffix(normalizeKey(relKey));
-
+  console.log(`[Storage] Uploading bucket=${bucket} key=${key}`);
   await s3.send(
     new PutObjectCommand({
       Bucket: bucket,
@@ -53,33 +55,16 @@ export async function storagePut(
       ContentType: contentType,
     })
   );
-
-  // Build public URL
-  const endpoint = process.env.AWS_ENDPOINT_URL;
-  const region = process.env.AWS_REGION ?? "us-east-1";
-  const url = endpoint
-    ? `${endpoint.replace(/\/$/, "")}/${bucket}/${key}`
-    : `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-
+  const url = getPublicUrl(key);
+  console.log(`[Storage] Success: ${url}`);
   return { key, url };
 }
 
 export async function storageGet(relKey: string): Promise<{ key: string; url: string }> {
   const key = normalizeKey(relKey);
-  const bucket = getBucket();
-  const endpoint = process.env.AWS_ENDPOINT_URL;
-  const region = process.env.AWS_REGION ?? "us-east-1";
-  const url = endpoint
-    ? `${endpoint.replace(/\/$/, "")}/${bucket}/${key}`
-    : `https://${bucket}.s3.${region}.amazonaws.com/${key}`;
-  return { key, url };
+  return { key, url: getPublicUrl(key) };
 }
 
 export async function storageGetSignedUrl(relKey: string): Promise<string> {
-  const s3 = getS3Client();
-  const bucket = getBucket();
-  const key = normalizeKey(relKey);
-  return getSignedUrl(s3, new GetObjectCommand({ Bucket: bucket, Key: key }), {
-    expiresIn: 3600,
-  });
+  return getPublicUrl(normalizeKey(relKey));
 }
