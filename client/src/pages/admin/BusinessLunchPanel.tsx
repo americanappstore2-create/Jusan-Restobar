@@ -108,6 +108,17 @@ function ItemForm({
         </div>
         <div>
           <label className="font-body text-xs text-muted-foreground mb-1 block">
+            Name (EN)
+          </label>
+          <input
+            value={form.nameEn}
+            onChange={(e) => setForm((f) => ({ ...f, nameEn: e.target.value }))}
+            placeholder="Beshbarmak with Kazy"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground font-body text-sm focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
+        <div>
+          <label className="font-body text-xs text-muted-foreground mb-1 block">
             Описание (RU)
           </label>
           <input
@@ -125,6 +136,17 @@ function ItemForm({
             value={form.descriptionKz}
             onChange={(e) => setForm((f) => ({ ...f, descriptionKz: e.target.value }))}
             placeholder="Міндетті емес"
+            className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground font-body text-sm focus:outline-none focus:border-gold transition-colors"
+          />
+        </div>
+        <div>
+          <label className="font-body text-xs text-muted-foreground mb-1 block">
+            Description (EN)
+          </label>
+          <input
+            value={form.descriptionEn}
+            onChange={(e) => setForm((f) => ({ ...f, descriptionEn: e.target.value }))}
+            placeholder="Optional"
             className="w-full px-3 py-2 rounded-lg bg-secondary border border-border text-foreground font-body text-sm focus:outline-none focus:border-gold transition-colors"
           />
         </div>
