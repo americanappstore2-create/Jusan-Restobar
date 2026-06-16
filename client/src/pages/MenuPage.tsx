@@ -185,114 +185,125 @@ function BusinessLunchSection() {
 
         {/* Lunch content */}
         {isLoading ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-48 rounded-xl" />
-            ))}
-          </div>
+          <Skeleton className="h-96 rounded-xl" />
         ) : currentLunch ? (
-            <div>
-            <div className="flex items-center justify-between mb-4">
-              <div>
-                <p className="font-body text-sm text-muted-foreground">
-                  {lang === "en" ? DAY_NAMES_EN[currentLunch.day.dayOfWeek] : lang === "kz"
-                    ? DAY_NAMES_KZ[currentLunch.day.dayOfWeek]
-                    : DAY_NAMES_RU[currentLunch.day.dayOfWeek]}
-                </p>
-                <h3 className="font-display text-xl font-semibold text-foreground">
-                  {t(currentLunch.day.titleRu, currentLunch.day.titleKz, currentLunch.day.titleEn)}
-                </h3>
-                {(currentLunch.day.startTime || currentLunch.day.endTime) && (
-                  <p className="font-body text-xs text-muted-foreground mt-1">
-                    {currentLunch.day.startTime && currentLunch.day.endTime
-                      ? `${currentLunch.day.startTime} – ${currentLunch.day.endTime}`
-                      : currentLunch.day.startTime || currentLunch.day.endTime}
-                  </p>
+          (() => {
+            const cartKey = `lunch-${currentLunch.day.id}`;
+            const cartItem = items.find((i) => i.id === cartKey);
+            const availableItems = currentLunch.items.filter((item) => item.isAvailable);
+            // Use day image or first item image
+            const dayImage = (currentLunch.day as any).imageUrl;
+            const firstItemImage = availableItems.find(i => i.imageUrl)?.imageUrl;
+            const heroImage = dayImage || firstItemImage;
+
+            return (
+              <div className="bg-card rounded-2xl overflow-hidden border border-border max-w-2xl mx-auto animate-fade-in-up">
+                {/* Hero image */}
+                {heroImage && (
+                  <div className="aspect-[16/9] overflow-hidden">
+                    <img
+                      src={heroImage}
+                      alt={t(currentLunch.day.titleRu, currentLunch.day.titleKz, currentLunch.day.titleEn)}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                    />
+                  </div>
                 )}
-              </div>
-              {currentLunch.day.price && (
-                <span className="font-display text-2xl font-semibold text-gold">
-                  {Number(currentLunch.day.price).toLocaleString()} ₸
-                </span>
-              )}
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 stagger">
-              {currentLunch.items
-                .filter((item) => item.isAvailable)
-                .map((item) => {
-                const cartKey = `lunch-${currentLunch.day.id}-${item.id}`;
-                const cartItem = items.find((i) => i.id === cartKey);
-                return (
-                  <div
-                    key={item.id}
-                    className="bg-card rounded-xl overflow-hidden border border-border card-hover animate-fade-in-up"
-                  >
-                    {item.imageUrl && (
-                      <div className="aspect-[4/3] overflow-hidden">
-                        <img
-                          src={item.imageUrl}
-                          alt={t(item.nameRu, item.nameKz, item.nameEn)}
-                          className="w-full h-full object-cover"
-                          loading="lazy"
-                        />
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <h4 className="font-display text-lg font-semibold text-foreground">
-                        {t(item.nameRu, item.nameKz, item.nameEn)}
-                      </h4>
-                      {(item.descriptionRu || item.descriptionKz || item.descriptionEn) && (
-                        <p className="font-body text-sm text-muted-foreground mt-1 line-clamp-2">
-                          {t(item.descriptionRu || "", item.descriptionKz || "", item.descriptionEn || "")}
+
+                <div className="p-6">
+                  {/* Header */}
+                  <div className="flex items-start justify-between mb-4">
+                    <div>
+                      <p className="font-body text-sm text-muted-foreground">
+                        {lang === "en" ? DAY_NAMES_EN[currentLunch.day.dayOfWeek] : lang === "kz"
+                          ? DAY_NAMES_KZ[currentLunch.day.dayOfWeek]
+                          : DAY_NAMES_RU[currentLunch.day.dayOfWeek]}
+                      </p>
+                      <h3 className="font-display text-2xl font-semibold text-foreground">
+                        {t(currentLunch.day.titleRu, currentLunch.day.titleKz, currentLunch.day.titleEn)}
+                      </h3>
+                      {(currentLunch.day.startTime || currentLunch.day.endTime) && (
+                        <p className="font-body text-xs text-muted-foreground mt-1">
+                          {currentLunch.day.startTime} – {currentLunch.day.endTime}
                         </p>
                       )}
-                      <div className="mt-3 flex justify-end">
-                        {!cartItem ? (
-                          <button
-                            onClick={() =>
-                              addItem({
-                                id: cartKey,
-                                nameRu: item.nameRu,
-                                nameKz: item.nameKz,
-                                price: currentLunch.day.price,
-                                type: "lunch",
-                              })
-                            }
-                            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-gold text-background font-body text-sm font-medium btn-press hover:opacity-90 transition-opacity"
-                          >
-                            <Plus className="w-4 h-4" />
-                            {t("Добавить", "Қосу")}
-                          </button>
-                        ) : (
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() =>
-                                cartItem.quantity === 1
-                                  ? removeItem(cartItem.id)
-                                  : updateQuantity(cartItem.id, cartItem.quantity - 1)
-                              }
-                              className="w-7 h-7 rounded-full bg-secondary flex items-center justify-center btn-press hover:bg-gold hover:text-background transition-colors"
-                            >
-                              <Minus className="w-3.5 h-3.5" />
-                            </button>
-                            <span className="font-body text-sm font-semibold w-5 text-center text-foreground">
-                              {cartItem.quantity}
-                            </span>
-                            <button
-                              onClick={() => updateQuantity(cartItem.id, cartItem.quantity + 1)}
-                              className="w-7 h-7 rounded-full bg-gold text-background flex items-center justify-center btn-press hover:opacity-90 transition-opacity"
-                            >
-                              <Plus className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        )}
-                      </div>
                     </div>
+                    {currentLunch.day.price && (
+                      <span className="font-display text-2xl font-semibold text-gold whitespace-nowrap ml-4">
+                        {Number(currentLunch.day.price).toLocaleString()} ₸
+                      </span>
+                    )}
                   </div>
-                );
-              })}
-            </div>
-          </div>
+
+                  {/* Dishes list */}
+                  {availableItems.length > 0 && (
+                    <div className="mb-5 space-y-2">
+                      <div className="gold-divider mb-3" />
+                      {availableItems.map((item) => (
+                        <div key={item.id} className="flex items-start gap-2">
+                          <span className="text-gold mt-1">•</span>
+                          <div>
+                            <span className="font-body text-sm text-foreground">
+                              {t(item.nameRu, item.nameKz, item.nameEn)}
+                            </span>
+                            {(item.descriptionRu || item.descriptionKz || item.descriptionEn) && (
+                              <p className="font-body text-xs text-muted-foreground">
+                                {t(item.descriptionRu || "", item.descriptionKz || "", item.descriptionEn || "")}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <div className="gold-divider mt-3" />
+                    </div>
+                  )}
+
+                  {/* Add to cart */}
+                  <div className="flex justify-end">
+                    {!cartItem ? (
+                      <button
+                        onClick={() =>
+                          addItem({
+                            id: cartKey,
+                            nameRu: t(currentLunch.day.titleRu, currentLunch.day.titleKz, currentLunch.day.titleEn),
+                            nameKz: currentLunch.day.titleKz,
+                            price: currentLunch.day.price,
+                            type: "lunch",
+                          })
+                        }
+                        className="flex items-center gap-2 px-5 py-2.5 rounded-xl gold-gradient text-background font-body text-sm font-semibold btn-press hover:opacity-90 transition-opacity"
+                      >
+                        <Plus className="w-4 h-4" />
+                        {t("Добавить в корзину", "Себетке қосу", "Add to cart")}
+                      </button>
+                    ) : (
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() =>
+                            cartItem.quantity === 1
+                              ? removeItem(cartItem.id)
+                              : updateQuantity(cartItem.id, cartItem.quantity - 1)
+                          }
+                          className="w-8 h-8 rounded-full bg-secondary flex items-center justify-center btn-press hover:bg-gold hover:text-background transition-colors"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="font-body text-sm font-semibold w-6 text-center text-foreground">
+                          {cartItem.quantity}
+                        </span>
+                        <button
+                          onClick={() => updateQuantity(cartItem.id, cartItem.quantity + 1)}
+                          className="w-8 h-8 rounded-full bg-gold text-background flex items-center justify-center btn-press hover:opacity-90 transition-opacity"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })()
         ) : (
           <p className="text-center text-muted-foreground font-body py-8">
             {t("Бизнес-ланч на этот день не запланирован", "Бұл күнге бизнес-ланч жоспарланбаған")}
