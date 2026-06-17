@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { Plus, Trash2, X, Check, Upload, ImageIcon, ChevronDown, ChevronUp, Eye, EyeOff } from "lucide-react";
+import { Plus, Trash2, X, Check, Upload, ImageIcon, ChevronDown, ChevronUp, Eye, EyeOff, Pencil } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -208,6 +208,7 @@ function DayCard({ dow, dayNameRu, dayNameKz }: { dow: number; dayNameRu: string
   const [expanded, setExpanded] = useState(false);
   const [showItemForm, setShowItemForm] = useState(false);
   const [editingDay, setEditingDay] = useState(false);
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [dayForm, setDayForm] = useState({ titleRu: "", titleKz: "", titleEn: "", price: "", startTime: "12:00", endTime: "15:00", isActive: true });
 
   const { data: allLunches, isLoading } = trpc.admin.getAllBusinessLunches.useQuery();
@@ -252,6 +253,13 @@ function DayCard({ dow, dayNameRu, dayNameKz }: { dow: number; dayNameRu: string
   });
 
   const toggleItemAvailability = trpc.admin.toggleBusinessLunchItemAvailability.useMutation({
+    onSuccess: () => {
+      utils.admin.getAllBusinessLunches.invalidate();
+      utils.menu.allBusinessLunches.invalidate();
+    },
+    onError: (e) => toast.error(e.message),
+  });
+  const updateItem = trpc.admin.updateBusinessLunchItem.useMutation({
     onSuccess: () => {
       utils.admin.getAllBusinessLunches.invalidate();
       utils.menu.allBusinessLunches.invalidate();
@@ -452,56 +460,68 @@ function DayCard({ dow, dayNameRu, dayNameKz }: { dow: number; dayNameRu: string
           {lunchData && lunchData.items.length > 0 && (
             <div className="mt-3 flex flex-col gap-2">
               {lunchData.items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-center gap-3 px-3 py-2 bg-secondary/40 rounded-lg group"
-                >
-                  {item.imageUrl && (
-                    <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
-                      <img
-                        src={item.imageUrl}
-                        alt={item.nameRu}
-                        className="w-full h-full object-cover"
+                <div key={item.id}>
+                  {editingItemId === item.id ? (
+                    <div className="border border-gold/30 rounded-lg p-3 bg-secondary/20">
+                      <ItemForm
+                        initial={{
+                          nameRu: item.nameRu,
+                          nameKz: item.nameKz,
+                          nameEn: item.nameEn,
+                          descriptionRu: item.descriptionRu ?? "",
+                          descriptionKz: item.descriptionKz ?? "",
+                          descriptionEn: item.descriptionEn ?? "",
+                          imageUrl: item.imageUrl ?? "",
+                          imageKey: item.imageKey ?? "",
+                          sortOrder: item.sortOrder,
+                          isAvailable: item.isAvailable,
+                        }}
+                        onSave={(data) => {
+                          updateItem.mutate({ id: item.id, ...data });
+                          setEditingItemId(null);
+                        }}
+                        onCancel={() => setEditingItemId(null)}
+                        loading={updateItem.isPending}
                       />
                     </div>
-                  )}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="font-body text-sm text-foreground truncate">{item.nameRu}</p>
-                      {!item.isAvailable && (
-                        <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-body bg-destructive/20 text-destructive">
-                          нет
-                        </span>
+                  ) : (
+                    <div className="flex items-center gap-3 px-3 py-2 bg-secondary/40 rounded-lg group">
+                      {item.imageUrl && (
+                        <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0">
+                          <img src={item.imageUrl} alt={item.nameRu} className="w-full h-full object-cover" />
+                        </div>
                       )}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2">
+                          <p className="font-body text-sm text-foreground truncate">{item.nameRu}</p>
+                          {!item.isAvailable && (
+                            <span className="flex-shrink-0 px-1.5 py-0.5 rounded text-xs font-body bg-destructive/20 text-destructive">нет</span>
+                          )}
+                        </div>
+                        <p className="font-body text-xs text-muted-foreground truncate">{item.nameKz}</p>
+                      </div>
+                      <button
+                        onClick={() => setEditingItemId(item.id)}
+                        title="Редактировать"
+                        className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center btn-press hover:bg-gold hover:text-background transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => toggleItemAvailability.mutate({ itemId: item.id, isAvailable: !item.isAvailable })}
+                        title={item.isAvailable ? "Скрыть" : "Показать"}
+                        className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center btn-press hover:bg-secondary/70 transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        {item.isAvailable ? <Eye className="w-3.5 h-3.5 text-muted-foreground" /> : <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />}
+                      </button>
+                      <button
+                        onClick={() => { if (confirm(`Удалить "${item.nameRu}"?`)) deleteItem.mutate({ id: item.id }); }}
+                        className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center btn-press hover:bg-destructive hover:text-destructive-foreground transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
                     </div>
-                    <p className="font-body text-xs text-muted-foreground truncate">{item.nameKz}</p>
-                  </div>
-                  <button
-                    onClick={() =>
-                      toggleItemAvailability.mutate({
-                        itemId: item.id,
-                        isAvailable: !item.isAvailable,
-                      })
-                    }
-                    title={item.isAvailable ? "Скрыть" : "Показать"}
-                    className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center btn-press hover:bg-secondary/70 transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    {item.isAvailable ? (
-                      <Eye className="w-3.5 h-3.5 text-muted-foreground" />
-                    ) : (
-                      <EyeOff className="w-3.5 h-3.5 text-muted-foreground" />
-                    )}
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (confirm(`Удалить "${item.nameRu}"?`)) {
-                        deleteItem.mutate({ id: item.id });
-                      }
-                    }}
-                    className="w-7 h-7 rounded-lg bg-secondary flex items-center justify-center btn-press hover:bg-destructive hover:text-destructive-foreground transition-colors opacity-0 group-hover:opacity-100"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+                  )}
                 </div>
               ))}
             </div>
