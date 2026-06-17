@@ -191,24 +191,43 @@ function BusinessLunchSection() {
             const cartKey = `lunch-${currentLunch.day.id}`;
             const cartItem = items.find((i) => i.id === cartKey);
             const availableItems = currentLunch.items.filter((item) => item.isAvailable);
-            // Use day image or first item image
+            // Use day image or auto-collage from item photos
             const dayImage = (currentLunch.day as any).imageUrl;
-            const firstItemImage = availableItems.find(i => i.imageUrl)?.imageUrl;
-            const heroImage = dayImage || firstItemImage;
+            const collageImages = availableItems.filter(i => i.imageUrl).slice(0, 3).map(i => i.imageUrl!);
 
             return (
               <div className="bg-card rounded-2xl overflow-hidden border border-border max-w-2xl mx-auto animate-fade-in-up">
-                {/* Hero image */}
-                {heroImage && (
+                {/* Hero image or auto-collage */}
+                {dayImage ? (
                   <div className="aspect-[16/9] overflow-hidden">
                     <img
-                      src={heroImage}
+                      src={dayImage}
                       alt={t(currentLunch.day.titleRu, currentLunch.day.titleKz, currentLunch.day.titleEn)}
                       className="w-full h-full object-cover"
                       loading="lazy"
                     />
                   </div>
-                )}
+                ) : collageImages.length === 1 ? (
+                  <div className="aspect-[16/9] overflow-hidden">
+                    <img src={collageImages[0]} alt="" className="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                ) : collageImages.length === 2 ? (
+                  <div className="aspect-[16/9] grid grid-cols-2 gap-0.5 overflow-hidden">
+                    {collageImages.map((src, i) => (
+                      <div key={i} className="overflow-hidden">
+                        <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    ))}
+                  </div>
+                ) : collageImages.length >= 3 ? (
+                  <div className="aspect-[16/9] grid grid-cols-3 gap-0.5 overflow-hidden">
+                    {collageImages.map((src, i) => (
+                      <div key={i} className="overflow-hidden">
+                        <img src={src} alt="" className="w-full h-full object-cover" loading="lazy" />
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
 
                 <div className="p-6">
                   {/* Header */}
